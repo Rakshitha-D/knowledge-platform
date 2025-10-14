@@ -484,16 +484,18 @@ object CollectionCSVManager extends CollectionInputFileReader  {
     childrenHierarchy.map(record => {
       val UnitChildren = if (record.contains(CollectionTOCConstants.CHILDREN)) {
           record(CollectionTOCConstants.CHILDREN).asInstanceOf[List[Map[String, AnyRef]]].map(childNode => {
-            val childContentType = childNode.getOrElse(CollectionTOCConstants.CONTENT_TYPE, "").toString
-            if(childContentType.equalsIgnoreCase(collectionUnitType)) childNode(CollectionTOCConstants.IDENTIFIER).toString else ""
+            if(record.getOrElse(CollectionTOCConstants.CONTENT_TYPE,"").toString.equalsIgnoreCase(collectionUnitType))
+              childNode(CollectionTOCConstants.IDENTIFIER).toString
+            else ""
           }).filter(nodeId => nodeId.nonEmpty).asInstanceOf[Seq[String]]
         }
         else Seq.empty[String]
 
       val linkedContents = if (record.contains(CollectionTOCConstants.CHILDREN)) {
         record(CollectionTOCConstants.CHILDREN).asInstanceOf[List[Map[String, AnyRef]]].map(childNode => {
-          val childContentType = childNode.getOrElse(CollectionTOCConstants.CONTENT_TYPE, "").toString
-          if(!childContentType.equalsIgnoreCase(collectionUnitType)) childNode(CollectionTOCConstants.IDENTIFIER).toString else ""
+          if(!record.getOrElse(CollectionTOCConstants.CONTENT_TYPE,"").toString.equalsIgnoreCase(collectionUnitType))
+            childNode(CollectionTOCConstants.IDENTIFIER).toString
+          else ""
         }).filter(nodeId => nodeId.nonEmpty).asInstanceOf[Seq[String]]
       }
       else Seq.empty[String]
