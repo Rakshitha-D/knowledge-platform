@@ -53,7 +53,7 @@ object CollectionCSVManager extends CollectionInputFileReader  {
     if (mode.equals(CollectionTOCConstants.UPDATE)) validateRecordsDataAuthenticity(inputFileExtension, csvRecords, collectionHierarchy) else List.empty[Map[String, AnyRef]]
   }
 
-  def validateCollection(collection: Map[String, AnyRef], mode: String): Unit = {
+  def validateCollection(collection: Map[String, AnyRef], mode: String) {
     if (!COLLECTION_TOC_ALLOWED_MIMETYPE.equalsIgnoreCase(collection(MIME_TYPE).toString))
       throw new ClientException("INVALID_COLLECTION", "Invalid Collection. Please Provide Valid Collection Identifier.")
     if(mode.equalsIgnoreCase("export")) {
@@ -289,7 +289,7 @@ object CollectionCSVManager extends CollectionInputFileReader  {
                 val dialCode = if(csvRecordMap(CollectionTOCConstants.QR_CODE).nonEmpty) csvRecordMap(CollectionTOCConstants.QR_CODE).trim else ""
 
                 val csvLinkedContentsList: Seq[String] = csvRecord.toMap.asScala.toMap.map(colData => {
-                  if(linkedContentHdrColumnsList.contains(colData._1) && colData._2.nonEmpty) colData._2.trim else ""
+                  if(linkedContentHdrColumnsList.contains(colData._1) && colData._2.nonEmpty) colData._2.trim.toLowerCase() else ""
                 }).filter(msg => msg.nonEmpty).toSeq
 
                 scala.collection.mutable.Map(CollectionTOCConstants.IDENTIFIER -> csvRecordMap(collectionNodeIdentifierHeader.head), CollectionTOCConstants.NAME -> folderData._2,
@@ -398,23 +398,37 @@ object CollectionCSVManager extends CollectionInputFileReader  {
         val hierarchyNode = record._2
         val nodeInfo: scala.collection.mutable.Map[String, AnyRef] = if(updatedFolderInfoMap.contains(record._1)) updatedFolderInfoMap(record._1) else hierarchyNode
         
-        // Build ordered children: keep unit children from existing hierarchy; for linked contents, if CSV provided any, replace existing linked contents with CSV list
-        val baseChildren: Seq[String] = if(hierarchyNode.contains(CollectionTOCConstants.CHILDREN) && hierarchyNode(CollectionTOCConstants.CHILDREN).asInstanceOf[Seq[String]].nonEmpty)
-          hierarchyNode(CollectionTOCConstants.CHILDREN).asInstanceOf[Seq[String]] else Seq.empty[String]
-        val existingLinked: Seq[String] = if(hierarchyNode.contains(CollectionTOCConstants.LINKED_CONTENT) && hierarchyNode(CollectionTOCConstants.LINKED_CONTENT).asInstanceOf[Seq[String]].nonEmpty)
-          hierarchyNode(CollectionTOCConstants.LINKED_CONTENT).asInstanceOf[Seq[String]] else Seq.empty[String]
-        val csvLinked: Seq[String] = if(nodeInfo.contains(CollectionTOCConstants.LINKED_CONTENT) && nodeInfo(CollectionTOCConstants.LINKED_CONTENT).asInstanceOf[Seq[String]].nonEmpty)
-          nodeInfo(CollectionTOCConstants.LINKED_CONTENT).asInstanceOf[Seq[String]] else Seq.empty[String]
-        
-        // Replacement semantics: keep existing unit children, replace linked contents with CSV-provided linked contents
-        val childrenFoldersSeq: Seq[String] = if(csvLinked.nonEmpty) baseChildren ++ csvLinked else baseChildren ++ existingLinked
-        
-        val childrenFolders = childrenFoldersSeq.map(childFolder => {
+        val childrenFolders = if(!updatedFolderInfoMap.contains(record._1)) {
+          if(hierarchyNode.contains(CollectionTOCConstants.CHILDREN) && hierarchyNode(CollectionTOCConstants.CHILDREN).asInstanceOf[Seq[String]].nonEmpty
+            && hierarchyNode.contains(CollectionTOCConstants.LINKED_CONTENT) && hierarchyNode(CollectionTOCConstants.LINKED_CONTENT).asInstanceOf[Seq[String]].nonEmpty) {
+            val allChildrenSet = (hierarchyNode(CollectionTOCConstants.CHILDREN).asInstanceOf[Seq[String]] ++ hierarchyNode(CollectionTOCConstants.LINKED_CONTENT).asInstanceOf[Seq[String]]).toSet
+            allChildrenSet.map(childFolder => {
           if(folderInfoMap.contains(childFolder))
             folderInfoMap(childFolder).asInstanceOf[scala.collection.mutable.Map[String,AnyRef]](CollectionTOCConstants.IDENTIFIER).toString
           else childFolder
         }).mkString("[\"","\",\"","\"]")
-        
+          }
+          else if(hierarchyNode.contains(CollectionTOCConstants.CHILDREN) && hierarchyNode(CollectionTOCConstants.CHILDREN).asInstanceOf[Seq[String]].nonEmpty)
+            hierarchyNode(CollectionTOCConstants.CHILDREN).asInstanceOf[Seq[String]].toSet[String].mkString("[\"","\",\"","\"]")
+          else if(hierarchyNode.contains(CollectionTOCConstants.LINKED_CONTENT) && hierarchyNode(CollectionTOCConstants.LINKED_CONTENT).asInstanceOf[Seq[String]].nonEmpty)
+            hierarchyNode(CollectionTOCConstants.LINKED_CONTENT).asInstanceOf[Seq[String]].toSet.mkString("[\"","\",\"","\"]")
+          else "[]"
+        } else {
+          if(hierarchyNode.contains(CollectionTOCConstants.CHILDREN) && hierarchyNode(CollectionTOCConstants.CHILDREN).asInstanceOf[Seq[String]].nonEmpty
+            && nodeInfo.contains(CollectionTOCConstants.LINKED_CONTENT) && nodeInfo(CollectionTOCConstants.LINKED_CONTENT).asInstanceOf[Seq[String]].nonEmpty) {
+            val allChildrenSet = (hierarchyNode(CollectionTOCConstants.CHILDREN).asInstanceOf[Seq[String]] ++ nodeInfo(CollectionTOCConstants.LINKED_CONTENT).asInstanceOf[Seq[String]]).toSet
+            allChildrenSet.map(childFolder => {
+              if(folderInfoMap.contains(childFolder))
+                folderInfoMap(childFolder).asInstanceOf[scala.collection.mutable.Map[String,AnyRef]](CollectionTOCConstants.IDENTIFIER).toString
+              else childFolder
+            }).mkString("[\"","\",\"","\"]")
+          }
+          else if(hierarchyNode.contains(CollectionTOCConstants.CHILDREN) && hierarchyNode(CollectionTOCConstants.CHILDREN).asInstanceOf[Seq[String]].nonEmpty)
+            hierarchyNode(CollectionTOCConstants.CHILDREN).asInstanceOf[Seq[String]].toSet[String].mkString("[\"","\",\"","\"]")
+          else if(nodeInfo.contains(CollectionTOCConstants.LINKED_CONTENT) && nodeInfo(CollectionTOCConstants.LINKED_CONTENT).asInstanceOf[Seq[String]].nonEmpty)
+            nodeInfo(CollectionTOCConstants.LINKED_CONTENT).asInstanceOf[Seq[String]].toSet.mkString("[\"","\",\"","\"]")
+          else "[]"
+        }
         val folderNodeHierarchy = s""""${record._1}": {"name": "${nodeInfo("name").toString.trim}","root": false,"contentType": "$collectionUnitType", "children": $childrenFolders}"""
 
         val contentsNode = if(nodeInfo.contains(CollectionTOCConstants.LINKED_CONTENT) && nodeInfo(CollectionTOCConstants.LINKED_CONTENT).asInstanceOf[Seq[String]].nonEmpty && linkedContentsInfoMap.nonEmpty)
