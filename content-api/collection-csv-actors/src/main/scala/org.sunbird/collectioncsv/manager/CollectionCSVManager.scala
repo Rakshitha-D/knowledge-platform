@@ -289,7 +289,7 @@ object CollectionCSVManager extends CollectionInputFileReader  {
                 val dialCode = if(csvRecordMap(CollectionTOCConstants.QR_CODE).nonEmpty) csvRecordMap(CollectionTOCConstants.QR_CODE).trim else ""
 
                 val csvLinkedContentsList: Seq[String] = csvRecord.toMap.asScala.toMap.map(colData => {
-                  if(linkedContentHdrColumnsList.contains(colData._1) && colData._2.nonEmpty) colData._2.trim.toLowerCase() else ""
+                  if(linkedContentHdrColumnsList.contains(colData._1) && colData._2.nonEmpty) colData._2.trim else ""
                 }).filter(msg => msg.nonEmpty).toSeq
 
                 scala.collection.mutable.Map(CollectionTOCConstants.IDENTIFIER -> csvRecordMap(collectionNodeIdentifierHeader.head), CollectionTOCConstants.NAME -> folderData._2,
