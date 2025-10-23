@@ -43,7 +43,7 @@ jobs:
 
       - name: Build Knowledge Platform
         run: |
-          mvn clean install -DskipTests=true \
+          mvn clean install -Dmaven.test.skip=true \
           -DCLOUD_STORE_GROUP_ID=${CLOUD_STORE_GROUP_ID} \
           -DCLOUD_STORE_ARTIFACT_ID=${CLOUD_STORE_ARTIFACT_ID}  \
           -DCLOUD_STORE_VERSION=${CLOUD_STORE_VERSION}
