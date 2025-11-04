@@ -37,7 +37,7 @@ jobs:
       # Step 4: Build the project
       - name: Build Content Service
         run: |
-          mvn clean install -DskipTests=true \
+          mvn clean install -Dmaven.test.skip=true \
             -DCLOUD_STORE_GROUP_ID=${{ vars.CLOUD_STORE_GROUP_ID }} \
             -DCLOUD_STORE_ARTIFACT_ID=${{ vars.CLOUD_STORE_ARTIFACT_ID }} \
             -DCLOUD_STORE_VERSION=${{ vars.CLOUD_STORE_VERSION }}
